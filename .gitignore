@@ -1,0 +1,14 @@
+# root
+.env
+*.pkl
+
+# models
+*.pt
+
+# patient-data
+retellings/p2/
+retellings/p3/
+retellings/p4/
+
+
+
