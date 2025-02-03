@@ -8,8 +8,9 @@ pipeline.
 
 ```
 # example folder structure
+
 p1/                                            # example participant_1
-│   ├── p1_story1_audio.wav         
+│   ├── p1_story1_audio.wav                    # example audio file for p1 retelling of story1, which is in audio-only modality
 │   ├── p1_story4_visual.wav
 │   ├── p1_story5_audiovisual.wav
 │   ├── p1_story9_audio.wav
