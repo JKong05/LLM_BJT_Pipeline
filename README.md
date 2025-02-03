@@ -28,10 +28,39 @@ Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 # Abstract (placeholder)
 Cool abstract bro
 
-# Overview
-The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings and subsequent representational vectors for participants.
-
 # Quick Start
+
+## Prerequisites
+SeamlessExpressive requires the [fairseq2](https://github.com/facebookresearch/fairseq2) library to run. It specifically provides the infrastructure for the [wav2vec 2.0](https://github.com/facebookresearch/fairseq2/tree/main/src/fairseq2/models/wav2vec2) model that is used for speech-to-text translations and embedding generation. Depending on your operating system, installation will vary. Once fairseq2 has been installed on your system, you can integrate it into the pipeline using pip.
+```
+# Install once fairseq2 has been installed on your system
+
+pip install fairseq2
+```
+
+### Linux
+For Linux users, fairseq2 depends on [libsndfile](https://github.com/libsndfile/libsndfile), which can be installed via the system package manager on most distributions.
+- On **ubuntu systems**, run
+  ```
+  sudo apt install libsndfile1
+  ```
+- On **Fedora**, run
+  ```
+  sudo dnf install libsndfile
+  ```
+### macOS
+For macOS users, fairseq2 depends on [libsndfile](https://github.com/libsndfile/libsndfile) as well, which can be installed via Homebrew.
+- In terminal, run
+  ```
+  brew install libsndfile
+  ```
+### Windows
+There is no currently no native support for Windows installation of fairseq2, but instructions for use on a Windows system is available in [documentation](https://github.com/facebookresearch/fairseq2?tab=readme-ov-file).
+
+
+
+
+## Installation
 > [!NOTE]
 > SeamlessExpressive can only be accessed on a request-basis. To download and integrate this model, follow instructions [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/content) or refer to [Seamless Communication](https://github.com/facebookresearch/seamless_communication/tree/main).
 1. Clone repository
