@@ -1,12 +1,14 @@
 import anthropic
 import os
-from dotenv import load_dotenv
-import pandas as pd
-from semantic_processing import semantic_search
-import torch
-from sentence_transformers import SentenceTransformer
 import torch.nn.functional as F
 import pickle
+import pandas as pd
+import torch
+
+from dotenv import load_dotenv
+from utils.semantic_processing import semantic_search
+from sentence_transformers import SentenceTransformer
+
 
 load_dotenv()
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")

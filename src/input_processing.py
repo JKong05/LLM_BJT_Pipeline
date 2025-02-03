@@ -3,8 +3,10 @@ import pandas as pd
 from pydub import AudioSegment
 import torch
 import torch.nn.functional as F
-from prosody_processing import get_prosodic_embeddings
-from semantic_processing import get_semantic_embeddings, semantic_search
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils.prosody_processing import get_prosodic_embeddings
+from utils.semantic_processing import get_semantic_embeddings, semantic_search
 
 def audio_concat(stories_folder, retelling_folder, samples_folder, participant_filter=None):
     audio_embeddings = {}
