@@ -1,33 +1,17 @@
 # Analytical Pipeline
 Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 
+```
 .
 ├── content
 │   ├── SeamlessExpressive
-│   └── README.md
-├── __pycache__
-│   ├── auto_pcp.cpython-310.pyc
-│   ├── auto_pcp.cpython-311.pyc
-│   ├── input_processing.cpython-310.pyc
-│   ├── input_processing.cpython-311.pyc
-│   ├── model.cpython-311.pyc
-│   ├── prosody_processing.cpython-310.pyc
-│   ├── prosody_processing.cpython-311.pyc
-│   ├── semantic_processing.cpython-310.pyc
-│   └── semantic_processing.cpython-311.pyc
 ├── results
 │   ├── figures
-│   ├── llm_performance.csv
-│   ├── output.csv
-│   ├── participant_data.csv
-│   └── performance_vectors.csv
+│   ├── outputs
 ├── retellings
-│   ├── p2
-│   ├── p3
-│   ├── p4
+│   ├── audios
 │   └── README.md
 ├── src
-│   ├── __pycache__
 │   ├── auto_pcp.py
 │   ├── input_processing.py
 │   ├── model.py
@@ -46,9 +30,6 @@ Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 ├── translations
 │   ├── LLMTT
 │   └── TTST
-├── embeddings.pkl
-├── LICENSE
-├── llm_embeddings.pkl
 ├── README.md
-├── tree_structure.txt
 └── visualize.ipynb
+```
