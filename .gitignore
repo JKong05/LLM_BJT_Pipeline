@@ -4,11 +4,16 @@
 
 # models
 *.pt
+src/auto_pcp.py
 
 # patient-data
 retellings/p2/
 retellings/p3/
 retellings/p4/
+translations/LLMTT/*.txt
+translations/TTST/*.txt
 
-
+# py
+*__pycache__/
+*.pyc
 

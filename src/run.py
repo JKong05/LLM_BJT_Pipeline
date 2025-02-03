@@ -2,33 +2,26 @@ import pandas as pd
 import numpy as np
 import pickle
 import os
-# from auto_pcp import run_auto_pcp, process_output
 from input_processing import audio_concat, semantic_concat, vectorize, compare_vectors
+    
 from model import generate_llm_response
-# folder & data paths
-stories_folder = "../stories/" # full stories
-retelling_folder = "../retellings/" # retelling .wav files
-samples_folder = "../story_samples/" # segmented stories for prosody-handling
-# input_tsv = "input.tsv" - input file for prediction model || deprecated
-# output_txt = "output.txt" - output file for prediction model || deprecated
-output_csv = "../results/output.csv"
-output_path = '../results/performance_vectors.csv'
-output_llm = '../results/llm_performance.csv'
-embeddings_path = '../embeddings.pkl'
 
-
-# Step 5: Compare semantic embeddings of participants to the semantic embeddings of the LLM (claude)
-print("\nGenerating LLM comparisons")
-df_llm = generate_llm_response(stories_folder, semantic_embeddings, output_llm)
-df_llm.to_csv(output_llm, sep="\t", index=False)
-print(f"\nllm performance results saved to: {output_llm}")
-
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+stories_folder = os.path.join(BASE_DIR, "../stories/")
+retelling_folder = os.path.join(BASE_DIR, "../retellings/")
+samples_folder = os.path.join(BASE_DIR, "../story_samples/")
+embeddings_path = os.path.join(BASE_DIR, "../embeddings.pkl")
+output_csv = os.path.join(BASE_DIR, "../results/output.csv")
+output_path = os.path.join(BASE_DIR, "../results/performance_vectors.csv")
+output_llm = os.path.join(BASE_DIR, "../results/llm_performance.csv")
 
 '''
+initialization
+
 Function that intializes the pipeline. Reads in localized pkl file
 if it exists, which contains embeddings from previous runs, or will generate new 
 prosodic or semantic embeddings using internal functions.
+
 '''
 def initialization():
     try:
@@ -65,17 +58,17 @@ def initialization():
         if not (new_participants or removed_participants):
             print("No changes detected in participant directories")
 
-        return [audio_embeddings, semantic_embeddings]
+        return audio_embeddings, semantic_embeddings
     except FileNotFoundError:
         # Prosodic embeddings generation
         audio_embeddings = audio_concat(stories_folder, retelling_folder, samples_folder)
         # Semantic embeddings generation
         semantic_embeddings = semantic_concat(stories_folder, retelling_folder)
 
-        with open(embeddings_paxth, 'wb') as f:
+        with open(embeddings_path, 'wb') as f:
             pickle.dump({'audio': audio_embeddings, 'semantic': semantic_embeddings}, f)
         
-        return [audio_embeddings, semantic_embeddings]
+        return audio_embeddings, semantic_embeddings
 
 # Helper function to retrieve existing participants
 def get_existing_participants(retelling_folder):
@@ -89,6 +82,11 @@ def get_existing_participants(retelling_folder):
     return participants
 
 '''
+vectorization
+
+Function that takes in audio and semantic embeddings and creates a combined
+representational vector for similarity comparison. Outputs to results folder
+in the form of df and csv.
 
 '''
 def vectorization(audio_embeddings, semantic_embeddings):
@@ -122,6 +120,11 @@ def vectorization(audio_embeddings, semantic_embeddings):
     return performance_vectors
 
 '''
+vector_comparison
+
+Function that takes in representational performance vectors and 
+performs cosine similarity analysis on the vectors. Outputs similarity
+scores to results folder.
 
 '''
 def vector_comparison(performance_vectors):
@@ -132,16 +135,31 @@ def vector_comparison(performance_vectors):
     df_comp['p1_num'] = df_comp['participant1_id'].str.extract('(\d+)').astype(int)
     df_comp['p2_num'] = df_comp['participant2_id'].str.extract('(\d+)').astype(int)
     df_comp = df_comp.sort_values(['story_num', 'p1_num', 'p2_num'])
-    df_comp = df_comp.drop(['story_num', 'p1_num', 'p2_num'], axis=1)  # Remove helper columns
+    df_comp = df_comp.drop(['story_num', 'p1_num', 'p2_num'], axis=1)
     df_comp.to_csv(output_csv, sep="\t", index=False)
+
+'''
+llm_comparison
+
+Generates and evaluate the LLM responses to the stories using Claude
+and creates semantic embeddings as well. Returns similarity between
+vectors of the LLM and the participants and saves to results folder.
+
+'''
+def llm_comparison(semantic_embeddings):
+    # Step 5: Compare semantic embeddings of participants to the semantic embeddings of the LLM (claude)
+    print("\nGenerating LLM comparisons")
+    df_llm = generate_llm_response(stories_folder, semantic_embeddings, output_llm)
+    df_llm.to_csv(output_llm, sep="\t", index=False)
+    print(f"\nllm performance results saved to: {output_llm}")
     
 
 def main():
-    embeddings = initialization()
+    audio_embeddings, semantic_embeddings = initialization()
     # 0: audio, 1: semantics
-    performance_vectors = vectorization(embeddings[0], embeddings[1])
+    performance_vectors = vectorization(audio_embeddings, semantic_embeddings)
     vector_comparison(performance_vectors)
-
+    llm_comparison(semantic_embeddings)
 
 if __name__ == "__main__":
     main()
