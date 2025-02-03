@@ -4,32 +4,23 @@ Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 ```
 .
 ├── content
-│   ├── SeamlessExpressive
-├── results
+│   ├── SeamlessExpressive              # Models from SeamlessCommunication
+├── results                             # Output results of pipeline on a participant-particpant basis
 │   ├── figures
 │   ├── outputs
-├── retellings
-│   ├── audios
-│   └── README.md
+├── retellings                          # The audio .wav files of the participants organized by a participant basis
 ├── src
-│   ├── auto_pcp.py
-│   ├── input_processing.py
-│   ├── model.py
-│   ├── prosody_processing.py
-│   ├── run.py
-│   └── semantic_processing.py
+│   ├── utils                           # Tools and utilities for inputing_processing and entrypoint run file
+│   ├── input_processing.py             # Parent function handling audio and semantic embedding processing
+│   ├── model.py                        # Handles LLM model integration
+│   └── run.py                          # Entrypoint for application
 ├── stories
-│   ├── audios
-│   └── text
+│   ├── audios                          # Raw audio files for the narrative stories
+│   └── text                            # Raw text files for the narrative stories
 ├── story_samples
-│   ├── Story1_sample.wav
-│   ├── Story2_sample.wav
-│   ├── Story4_sample.wav
-│   ├── Story5_sample.wav
-│   └── Story9_sample.wav
-├── translations
-│   ├── LLMTT
-│   └── TTST
+├── translations                        # Translations of participant responses (TTS) and LLM responses
+│   ├── LLMTT                           # Large language model to text
+│   └── TTST                            # Text to speech translation
 ├── README.md
 └── visualize.ipynb
 ```
