@@ -35,10 +35,11 @@ The human ability to understand and generate an endless variety of novel express
 ```
 git clone https://github.com/JKong05/LLM_BJT_Pipeline.git
 ```
+
+2. Install and integrate SeamlessExpressive models by submitting request for access and referring to README in `content`
+ 
 > [!NOTE]
 > For someone who may not have conda installed, visit the download page [here](https://docs.anaconda.com/miniconda/) to download the appropriate installer based on your operating system. Refer to [documentation](https://www.anaconda.com/download/success) if you need guidance in the installation process. Additionally, use `conda deactivate` if the environment no longer needs to be used.
-2. Install and integrate SeamlessExpressive models by submitting request for access and referring to README in `content`
-
 3. Create and initialize conda environment.
 ```
 # Step 1: init environment
