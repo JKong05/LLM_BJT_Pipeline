@@ -39,7 +39,7 @@ The process of developing an analytical pipeline to compare participant retellin
 git clone https://github.com/JKong05/LLM_BJT_Pipeline.git
 ```
 
-2. Install and integrate SeamlessExpressive models by submitting request for access and referring to README in `content`
+2. Install and integrate SeamlessExpressive models by submitting request for access and referring to README in `/content`
  
 > [!NOTE]
 > For someone who may not have conda installed, visit the download page [here](https://docs.anaconda.com/miniconda/) to download the appropriate installer based on your operating system. Refer to [documentation](https://www.anaconda.com/download/success) if you need guidance in the installation process. Additionally, use `conda deactivate` if the environment no longer needs to be used.
@@ -52,7 +52,7 @@ conda env create -f pipeline_environment.yml
 conda activate LLM_pipeline
 ```
 4. Add inputs for pipeline
-   - Refer to README in `retellings` or [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/retellings) for information on subfolder formatting.
+   - Refer to README in `/retellings` or [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/retellings) for information on subfolder formatting.
 
 5. Run the application
 ```
