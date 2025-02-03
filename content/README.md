@@ -11,6 +11,7 @@ and more information can be found about SeamlessExpressive [here](https://github
 
 ```
 # example folder structure
+
 content/
 │   ├── m2m_expressive_unity.pt
 │   ├── pretssel_melhifigan_wm-16khz.pt
