@@ -2,8 +2,25 @@
 Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 
 ### Overview
-The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings: **Meta's SeamlessExpressive** and **JinaAI's jina-embeddings-v3**.
+The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings.
 
+### Purpose
+The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive model** and **JinaAI's jina-embeddings-v3 model**. A typical use case is as follows:
+  1. Gather audio retellings of stories in .wav format
+  2. Input raw audio into SeamlessExpressive model and generate prosodic audio embeddings (1:512)
+  3. Take raw audio and translate to text using SeamlessM4T S2TT model
+     - Input text translations into jina-embeddings-v3 and generate semantic text embeddings (1:512)
+  4. Combine embeddings into one representational vector (1:1024)
+  5. Perform cosine similarity between participant vectors and create representational dissimilarity matrix
+  6. Generate LLM responses to stories
+     - Run LLM response through jina-embeddings-v3 and generate semantic text embeddings (1:512)
+     - Perform cosine similarity between participant vectors and LLM response vectors
+
+### Goals
+1. Determine trends and commonalities in and between age group linguistics by evaluating similarities in prosodic and semantic features of speech.
+2. Develop foundational code infrastructure for refinement and expansion.
+
+# Folder Structure
 ```
 .
 ├── content
@@ -32,21 +49,15 @@ The process of developing an analytical pipeline to compare participant retellin
 Cool abstract bro
 
 # Quick Start
+> [!NOTE]
+> SeamlessExpressive requires the [fairseq2](https://github.com/facebookresearch/fairseq2) library to run. It specifically provides the infrastructure for the [wav2vec 2.0](https://github.com/facebookresearch/fairseq2/tree/main/src/fairseq2/models/wav2vec2) model that is used for speech-to-text translations and embedding generation. Depending on your operating system, installation will vary.
 
-## Prerequisites
-SeamlessExpressive requires the [fairseq2](https://github.com/facebookresearch/fairseq2) library to run. It specifically provides the infrastructure for the [wav2vec 2.0](https://github.com/facebookresearch/fairseq2/tree/main/src/fairseq2/models/wav2vec2) model that is used for speech-to-text translations and embedding generation. Depending on your operating system, installation will vary.
-
-### macOS
-For macOS users, fairseq2 depends on [libsndfile](https://github.com/libsndfile/libsndfile) as well, which can be installed via Homebrew.
-- In terminal, run
-  ```
-  brew install libsndfile
-  ```
 
 ## Installation
 > [!NOTE]
 > SeamlessExpressive can only be accessed on a request-basis. To download and integrate this model, follow instructions [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/content) or refer to [Seamless Communication](https://github.com/facebookresearch/seamless_communication/tree/main).
 1. Clone repository
+
 ```
 git clone https://github.com/JKong05/LLM_BJT_Pipeline.git
 ```
