@@ -34,34 +34,14 @@ Cool abstract bro
 # Quick Start
 
 ## Prerequisites
-SeamlessExpressive requires the [fairseq2](https://github.com/facebookresearch/fairseq2) library to run. It specifically provides the infrastructure for the [wav2vec 2.0](https://github.com/facebookresearch/fairseq2/tree/main/src/fairseq2/models/wav2vec2) model that is used for speech-to-text translations and embedding generation. Depending on your operating system, installation will vary. Once fairseq2 has been installed on your system, you can integrate it into the pipeline using pip.
-```
-# Install once fairseq2 has been installed on your system
+SeamlessExpressive requires the [fairseq2](https://github.com/facebookresearch/fairseq2) library to run. It specifically provides the infrastructure for the [wav2vec 2.0](https://github.com/facebookresearch/fairseq2/tree/main/src/fairseq2/models/wav2vec2) model that is used for speech-to-text translations and embedding generation. Depending on your operating system, installation will vary.
 
-pip install fairseq2
-```
-
-### Linux
-For Linux users, fairseq2 depends on [libsndfile](https://github.com/libsndfile/libsndfile), which can be installed via the system package manager on most distributions.
-- On **ubuntu systems**, run
-  ```
-  sudo apt install libsndfile1
-  ```
-- On **Fedora**, run
-  ```
-  sudo dnf install libsndfile
-  ```
 ### macOS
 For macOS users, fairseq2 depends on [libsndfile](https://github.com/libsndfile/libsndfile) as well, which can be installed via Homebrew.
 - In terminal, run
   ```
   brew install libsndfile
   ```
-### Windows
-There is no currently no native support for Windows installation of fairseq2, but instructions for use on a Windows system is available in [documentation](https://github.com/facebookresearch/fairseq2?tab=readme-ov-file).
-
-
-
 
 ## Installation
 > [!NOTE]
