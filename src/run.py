@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import pickle
 import os
-from input_processing import audio_concat, semantic_concat, vectorize, compare_vectors
+from input_processing import prosodic_concat, semantic_concat, vectorize, compare_vectors
 from utils.participant_utils import get_existing_participants, performance_vector_results, vector_comparison_results
     
 from model import generate_llm_response
@@ -17,6 +17,12 @@ output_path = os.path.join(BASE_DIR, "../results/performance_vectors.csv")
 output_llm = os.path.join(BASE_DIR, "../results/llm_performance.csv")
 
 '''
+run.py
+
+Script for running the pipeline for the experimental data
+'''
+
+'''
 initialization
 
 Function that intializes the pipeline. Reads in localized pkl file
@@ -29,9 +35,9 @@ def initialization():
         # Access an existing pkl file to read in pre-existing data
         with open(embeddings_path, 'rb') as f:
             save_data = pickle.load(f)
-            audio_embeddings = save_data['audio']
+            prosodic_embeddings = save_data['prosodic']
             semantic_embeddings = save_data['semantic']
-            existing_participants = set(data['participant_id'] for data in audio_embeddings.values())
+            existing_participants = set(data['participant_id'] for data in prosodic_embeddings.values())
 
         current_participants = get_existing_participants(retelling_folder)
         new_participants = current_participants - existing_participants
@@ -40,47 +46,47 @@ def initialization():
         # Check if participants were removed from the retelling folder
         if removed_participants:
             print(f"Participants {removed_participants} cannot be found")
-            audio_embeddings = {k: v for k, v in audio_embeddings.items() 
+            prosodic_embeddings = {k: v for k, v in prosodic_embeddings.items() 
                             if v['participant_id'] not in removed_participants}
             semantic_embeddings = {k: v for k, v in semantic_embeddings.items() 
                                 if v['participant_id'] not in removed_participants}
             with open(embeddings_path, 'wb') as f:
-                pickle.dump({'audio': audio_embeddings, 'semantic': semantic_embeddings}, f)
+                pickle.dump({'prosodic': prosodic_embeddings, 'semantic': semantic_embeddings}, f)
         elif new_participants:
             print(f"New participants {new_participants} detected")
-            new_audio_embeddings = audio_concat(stories_folder, retelling_folder, samples_folder, participant_filter=new_participants)
+            new_prosodic_embeddings = prosodic_concat(stories_folder, retelling_folder, samples_folder, participant_filter=new_participants)
             new_semantic_embeddings = semantic_concat(stories_folder, retelling_folder, participant_filter=new_participants)
 
-            audio_embeddings.update(new_audio_embeddings)
+            prosodic_embeddings.update(new_prosodic_embeddings)
             semantic_embeddings.update(new_semantic_embeddings)
 
             with open(embeddings_path, 'wb') as f:
-                pickle.dump({'audio': audio_embeddings, 'semantic': semantic_embeddings}, f)
+                pickle.dump({'prosodic': prosodic_embeddings, 'semantic': semantic_embeddings}, f)
         if not (new_participants or removed_participants):
             print("No changes detected in participant directories")
 
-        return audio_embeddings, semantic_embeddings
+        return prosodic_embeddings, semantic_embeddings
     except FileNotFoundError:
         # Prosodic embeddings generation
-        audio_embeddings = audio_concat(stories_folder, retelling_folder, samples_folder)
+        prosodic_embeddings = prosodic_concat(stories_folder, retelling_folder, samples_folder)
         # Semantic embeddings generation
         semantic_embeddings = semantic_concat(stories_folder, retelling_folder)
 
         with open(embeddings_path, 'wb') as f:
-            pickle.dump({'audio': audio_embeddings, 'semantic': semantic_embeddings}, f)
+            pickle.dump({'prosodic': prosodic_embeddings, 'semantic': semantic_embeddings}, f)
         
-        return audio_embeddings, semantic_embeddings
+        return prosodic_embeddings, semantic_embeddings
 
 '''
 vectorization
 
-Function that takes in audio and semantic embeddings and creates a combined
+Function that takes in prosodic and semantic embeddings and creates a combined
 representational vector for similarity comparison. Outputs to results folder
 in the form of df and csv.
 
 '''
-def vectorization(audio_embeddings, semantic_embeddings):
-    performance_vectors = vectorize(audio_embeddings, semantic_embeddings)
+def vectorization(prosodic_embeddings, semantic_embeddings):
+    performance_vectors = vectorize(prosodic_embeddings, semantic_embeddings)
     performance_vector_results(performance_vectors, output_path)
 
     return performance_vectors
@@ -113,11 +119,11 @@ def llm_comparison(semantic_embeddings):
     
 
 def main():
-    audio_embeddings, semantic_embeddings = initialization()
-    # 0: audio, 1: semantics
-    performance_vectors = vectorization(audio_embeddings, semantic_embeddings)
+    prosodic_embeddings, semantic_embeddings = initialization()
+    # 0: prosody, 1: semantics
+    performance_vectors = vectorization(prosodic_embeddings, semantic_embeddings)
     vector_comparison(performance_vectors)
-    llm_comparison(semantic_embeddings)
+    # llm_comparison(semantic_embeddings)
 
 if __name__ == "__main__":
     main()

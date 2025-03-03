@@ -6,10 +6,10 @@ import torch.nn.functional as F
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.prosody_processing import get_prosodic_embeddings
-from utils.semantic_processing import get_semantic_embeddings, semantic_search
+from utils.semantic_processing import get_semantic_embeddings, semantic_seamless_search
 
-def audio_concat(stories_folder, retelling_folder, samples_folder, participant_filter=None):
-    audio_embeddings = {}
+def prosodic_concat(stories_folder, retelling_folder, samples_folder, participant_filter=None):
+    prosodic_embeddings = {}
     sample_duration_ms = 20 * 1000
     audios_folder = os.path.join(stories_folder, "audios")
 
@@ -51,18 +51,18 @@ def audio_concat(stories_folder, retelling_folder, samples_folder, participant_f
             story_embedding = get_prosodic_embeddings(sample_path)
             retelling_embedding = get_prosodic_embeddings(retelling_path)
 
-            audio_embeddings[key] = {
+            prosodic_embeddings[key] = {
                 'participant_id': participant_id,
                 'story_id': story_id,
-                'story_audio': story_embedding,
-                'retelling_audio': retelling_embedding,
+                'story_prosodic': story_embedding,
+                'retelling_prosodic': retelling_embedding,
                 'story_path': sample_path,
                 'retelling_path': retelling_path,
                 'modality': modality
             }
-            print(f"Generating new audio embeddings for {participant_id} - {story_id}")
+            print(f"Generating prosodic embeddings for {participant_id} - {story_id}: {modality}")
 
-    return audio_embeddings
+    return prosodic_embeddings
 
 def semantic_concat(stories_folder, retelling_folder, participant_filter=None):
     semantic_embeddings = {}
@@ -87,8 +87,8 @@ def semantic_concat(stories_folder, retelling_folder, participant_filter=None):
                         key = (participant_id, story_id)
                         # Generate new embeddings if they don't exist
                         retelling_path = os.path.join(root, retelling_filename)
-                        semantic_story_embedding = torch.from_numpy(semantic_search(story_text))
-                        semantic_retelling_embedding = torch.from_numpy(get_semantic_embeddings(retelling_path, story_id, participant_id))
+                        semantic_story_embedding = semantic_seamless_search(story_text)
+                        semantic_retelling_embedding = get_semantic_embeddings(retelling_path, story_id, participant_id)
 
                         semantic_embeddings[key] = {
                             'participant_id': participant_id,
@@ -97,66 +97,93 @@ def semantic_concat(stories_folder, retelling_folder, participant_filter=None):
                             'retelling_semantic': semantic_retelling_embedding,
                             'modality': modality
                         }
-                        print(f"Generated new semantic embeddings for {participant_id} - {story_id}")
+                        print(f"Generated semantic embeddings for {participant_id} - {story_id}: {modality}")
 
     return semantic_embeddings
 
-def vectorize(audio_embeddings, semantic_embeddings, normalize=True):
+def vectorize(prosodic_embeddings, semantic_embeddings, normalize=True):
     performance_vectors = {}
 
-    for key in audio_embeddings.keys():
+    for key in prosodic_embeddings.keys():
         if key in semantic_embeddings:
             participant_id, story_id = key
 
-            audio_embs = audio_embeddings[key]
+            prosodic_embs = prosodic_embeddings[key]
             semantic_embs = semantic_embeddings[key]
-
+            
+            # The prosodic and semantic characteristics of the stories.
             story_vector = combine_vectors(
-                semantic_embs['story_semantic'],
-                audio_embs['story_audio']
+                prosodic_embs['story_prosodic'],
+                semantic_embs['story_semantic']
             )
+
+            # The prosodic and semantic characteristics of the retellings.
             retelling_vector = combine_vectors(
-                semantic_embs['retelling_semantic'],
-                audio_embs['retelling_audio']
+                prosodic_embs['retelling_prosodic'],
+                semantic_embs['retelling_semantic']
             )
-            vector_similarity = F.cosine_similarity(
-                story_vector.unsqueeze(0), 
-                retelling_vector.unsqueeze(0)
-            ).item()
-            semantic_similarity = F.cosine_similarity(
-                semantic_embs['story_semantic'].unsqueeze(0),
-                semantic_embs['retelling_semantic'].unsqueeze(0)
-            ).item()
 
-            audio_similarity = F.cosine_similarity(
-                audio_embs['story_audio'].squeeze(0).unsqueeze(0),
-                audio_embs['retelling_audio'].squeeze(0).unsqueeze(0)
-            ).item()
+            participant_similarity = F.cosine_similarity(
+                ...
+            )
 
-            performance_vectors[key] = {
-                'modality': audio_embs['modality'],
-                'story_vector': story_vector,
-                'retelling_vector': retelling_vector,
-                'vector_similarity': vector_similarity,
-                'semantic_similarity': semantic_similarity,
-                'audio_similarity': audio_similarity,
-                'participant_id': participant_id,
-                'story_id': story_id,
-                'story_semantic_embedding': semantic_embs['story_semantic'],
-                'retelling_semantic_embedding': semantic_embs['retelling_semantic'],
-                'story_audio_embedding': audio_embs['story_audio'],
-                'retelling_audio_embedding': audio_embs['retelling_audio']
-            }
-            print(f"Processed vectors for {participant_id} - {story_id}")
+            prosodic_similarity = F.cosine_similarity()
+            semantic_similarity = F.cosine_similarity()
 
-    return performance_vectors
 
-def combine_vectors(semantic_emb, audio_emb):
-    # Matryoshka Embeddings
-    semantic_emb = semantic_emb[:512]
 
-    audio_emb = audio_emb.squeeze(0)
-    return torch.cat([semantic_emb, audio_emb], dim=0)
+
+
+            # story_vector = combine_vectors(
+            #     semantic_embs['story_semantic'],
+            #     prosodic_embs['story_audio']
+            # )
+            # retelling_vector = combine_vectors(
+            #     semantic_embs['retelling_semantic'],
+            #     prosodic_embs['retelling_audio']
+            # )
+            # vector_similarity = F.cosine_similarity(
+            #     story_vector.unsqueeze(0), 
+            #     retelling_vector.unsqueeze(0)
+            # ).item()
+            # semantic_similarity = F.cosine_similarity(
+            #     semantic_embs['story_semantic'].unsqueeze(0),
+            #     semantic_embs['retelling_semantic'].unsqueeze(0)
+            # ).item()
+
+            # audio_similarity = F.cosine_similarity(
+            #     prosodic_embs['story_audio'].squeeze(0).unsqueeze(0),
+            #     prosodic_embs['retelling_audio'].squeeze(0).unsqueeze(0)
+            # ).item()
+
+            # performance_vectors[key] = {
+            #     'modality': prosodic_embs['modality'],
+            #     'story_vector': story_vector,
+            #     'retelling_vector': retelling_vector,
+            #     'vector_similarity': vector_similarity,
+            #     'semantic_similarity': semantic_similarity,
+            #     'prosodic_similarity': prosodic_similarity,
+            #     'participant_id': participant_id,
+            #     'story_id': story_id,
+            #     'story_semantic_embedding': semantic_embs['story_semantic'],
+            #     'retelling_semantic_embedding': semantic_embs['retelling_semantic'],
+            #     'story_audio_embedding': prosodic_embs['story_audio'],
+            #     'retelling_audio_embedding': prosodic_embs['retelling_audio']
+            # }
+            # print(f"Processed vectors for {participant_id} - {story_id}")
+
+    return 0
+
+def combine_vectors(prosodic_embs, semantic_embs):
+    
+
+    
+    print(f"Semantic Embedding Shape: {semantic_emb.shape}, dtype: {semantic_emb.dtype}, device: {semantic_emb.device}")
+    print(f"Audio Embedding Shape: {audio_emb.shape}, dtype: {audio_emb.dtype}, device: {audio_emb.device}")
+
+
+
+    
 
 def compare_vectors(performance_vectors):
     data = []
