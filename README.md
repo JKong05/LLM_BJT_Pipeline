@@ -1,6 +1,26 @@
 # Analytical Pipeline
 Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 
+### Overview
+The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings.
+
+### Purpose
+The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive model** and **JinaAI's jina-embeddings-v3 model**. A typical use case is as follows:
+  1. Gather audio retellings of stories in .wav format
+  2. Input raw audio into SeamlessExpressive model and generate prosodic audio embeddings (1:512)
+  3. Take raw audio and translate to text using SeamlessM4T S2TT model
+     - Input text translations into jina-embeddings-v3 and generate semantic text embeddings (1:512)
+  4. Combine embeddings into one representational vector (1:1024)
+  5. Perform cosine similarity between participant vectors and create representational dissimilarity matrix
+  6. Generate LLM responses to stories
+     - Run LLM response through jina-embeddings-v3 and generate semantic text embeddings (1:512)
+     - Perform cosine similarity between participant vectors and LLM response vectors
+
+### Goals
+1. Determine trends and commonalities in and between age group linguistics by evaluating similarities in prosodic and semantic features of speech.
+2. Develop foundational code infrastructure for refinement and expansion.
+
+# Folder Structure
 ```
 .
 ├── content
@@ -26,18 +46,66 @@ Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 ```
 
 # Abstract (placeholder)
-The human ability to understand and generate an endless variety of novel expressions has long captivated researchers in the fields of neuroimaging and neuroscience. In particular, academia has focused on understanding specific brain activity that prompts developmental linguistic behaviors of an individual. Developmental linguistics is the study of how individuals learn, retain, and process language throughout their lifetime. This concept can be broken down into two key aspects: what individuals say and how they say it. A traditional approach to the experimentation of decomposing language processing was to create highly-controlled and factorial design paradigms. This approach involved participants being exposed to meaningless words, phrases, and sounds in an atypical environment and collecting brain activity data through techniques such as mangeotencepahlography (MEG). However, this procedure often fails to reflect natural, everyday language exposure, raising concerns about its reliability and relevance in measuring high-level cognitive language processing. Recent literature has addressed these gaps in knowledge by substituting these designs with more practical approaches. Researchers now use narrative stories instead of abstract syntactic stimuli and computational language models to analyze features of speech. While these methods do provide refined infrastructure, it is pertinent to evaluate how the experimental environment may also influence linguistic behaviors. The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings.
+Cool abstract bro
 
 # Quick Start
 > [!NOTE]
+> SeamlessExpressive requires the [fairseq2](https://github.com/facebookresearch/fairseq2) library to run. It specifically provides the infrastructure for the [wav2vec 2.0](https://github.com/facebookresearch/fairseq2/tree/main/src/fairseq2/models/wav2vec2) model that is used for speech-to-text translations and embedding generation. Depending on your operating system, installation will vary.
+
+
+## Installation
+> [!NOTE]
 > SeamlessExpressive can only be accessed on a request-basis. To download and integrate this model, follow instructions [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/content) or refer to [Seamless Communication](https://github.com/facebookresearch/seamless_communication/tree/main).
 1. Clone repository
+
 ```
 git clone https://github.com/JKong05/LLM_BJT_Pipeline.git
 ```
-2. Install and integrate SeamlessExpressive models by submitting request for access and referring to README in `content`.
-3. Create and initialize conda environment
+
+2. Install and integrate SeamlessExpressive models by submitting request for access and referring to README in `/content`
+ 
+> [!NOTE]
+> For someone who may not have conda installed, visit the download page [here](https://docs.anaconda.com/miniconda/) to download the appropriate installer based on your operating system. Refer to [documentation](https://www.anaconda.com/download/success) if you need guidance in the installation process. Additionally, use `conda deactivate` if the environment no longer needs to be used.
+3. Create and initialize conda environment.
 ```
+# Step 1: init environment
+conda env create -f pipeline_environment.yml
+
+# Step 2: activate the environment
+conda activate LLM_pipeline
+```
+4. Add inputs for pipeline
+   - Refer to README in `/retellings` or [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/retellings) for information on subfolder formatting.
+
+5. Run the application
+```
+# from root
+python src/run.py
+
+# from src
+cd src
+python run.py
+```
+
+# Citation
+```
+@inproceedings{seamless2023,
+   title="Seamless: Multilingual Expressive and Streaming Speech Translation",
+   author="{Seamless Communication}, Lo{\"i}c Barrault, Yu-An Chung, Mariano Coria Meglioli, David Dale, Ning Dong, Mark Duppenthaler, Paul-Ambroise Duquenne, Brian Ellis, Hady Elsahar, Justin Haaheim, John Hoffman, Min-Jae Hwang, Hirofumi Inaguma, Christopher Klaiber, Ilia Kulikov, Pengwei Li, Daniel Licht, Jean Maillard, Ruslan Mavlyutov, Alice Rakotoarison, Kaushik Ram Sadagopan, Abinesh Ramakrishnan, Tuan Tran, Guillaume Wenzek, Yilin Yang, Ethan Ye, Ivan Evtimov, Pierre Fernandez, Cynthia Gao, Prangthip Hansanti, Elahe Kalbassi, Amanda Kallet, Artyom Kozhevnikov, Gabriel Mejia, Robin San Roman, Christophe Touret, Corinne Wong, Carleigh Wood, Bokai Yu, Pierre Andrews, Can Balioglu, Peng-Jen Chen, Marta R. Costa-juss{\`a}, Maha Elbayad, Hongyu Gong, Francisco Guzm{\'a}n, Kevin Heffernan, Somya Jain, Justine Kao, Ann Lee, Xutai Ma, Alex Mourachko, Benjamin Peloquin, Juan Pino, Sravya Popuri, Christophe Ropers, Safiyyah Saleem, Holger Schwenk, Anna Sun, Paden Tomasello, Changhan Wang, Jeff Wang, Skyler Wang, Mary Williamson",
+  journal={ArXiv},
+  year={2023}
+}
+```
+```
+@misc{sturua2024jinaembeddingsv3multilingualembeddingstask,
+      title={jina-embeddings-v3: Multilingual Embeddings With Task LoRA}, 
+      author={Saba Sturua and Isabelle Mohr and Mohammad Kalim Akram and Michael Günther and Bo Wang and Markus Krimmel and Feng Wang and Georgios Mastrapas and Andreas Koukounas and Andreas Koukounas and Nan Wang and Han Xiao},
+      year={2024},
+      eprint={2409.10173},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2409.10173}, 
+}
 
 ```
 
