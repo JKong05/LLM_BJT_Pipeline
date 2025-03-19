@@ -5,7 +5,7 @@ Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings.
 
 ### Purpose
-The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive model** and **JinaAI's jina-embeddings-v3 model**. A typical use case is as follows:
+The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive prosody model and Meta's SONAR semantic model**. A typical use case is as follows:
   1. Gather audio retellings of stories in .wav format
   2. Input raw audio into SeamlessExpressive model and generate prosodic audio embeddings (1:512)
   3. Take raw audio and translate to text using SeamlessM4T S2TT model
