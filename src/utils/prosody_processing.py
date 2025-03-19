@@ -16,7 +16,7 @@ from seamless_communication.models.unity import (
     load_unity_unit_tokenizer,
 )
 
-CHECKPOINTS_PATH = pathlib.Path("/home/wallacelab/LLM_BJT/pipeline/content/SeamlessExpressive")
+CHECKPOINTS_PATH = pathlib.Path("/home/wallacelab/teba/multimodal_brain_inspired/LLM_BJT/pipeline/content/SeamlessExpressive")
 if not CHECKPOINTS_PATH.exists():
     from huggingface_hub import snapshot_download
     snapshot_download(repo_id="facebook/seamless-expressive", repo_type="model", local_dir=CHECKPOINTS_PATH)

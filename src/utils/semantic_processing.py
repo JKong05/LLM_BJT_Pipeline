@@ -36,8 +36,6 @@ def get_semantic_embeddings(audio_path, story_id, participant_id, chunk_duration
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(full_text)
 
-    
-
     return semantic_seamless_search(full_text)
 
 # Seamless Sonar encoder
