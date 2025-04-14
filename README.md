@@ -5,16 +5,8 @@ Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings.
 
 ### Purpose
-The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive prosody model and Meta's SONAR semantic model**. A typical use case is as follows:
-  1. Gather audio retellings of stories in .wav format
-  2. Input raw audio into SeamlessExpressive model and generate prosodic audio embeddings (1:512)
-  3. Take raw audio and translate to text using SeamlessM4T S2TT model
-     - Input text translations into jina-embeddings-v3 and generate semantic text embeddings (1:512)
-  4. Combine embeddings into one representational vector (1:1024)
-  5. Perform cosine similarity between participant vectors and create representational dissimilarity matrix
-  6. Generate LLM responses to stories
-     - Run LLM response through jina-embeddings-v3 and generate semantic text embeddings (1:512)
-     - Perform cosine similarity between participant vectors and LLM response vectors
+The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive expressivity model and Meta's SONAR semantic model**. A typical use case is as follows:
+
 
 ### Goals
 1. Determine trends and commonalities in and between age group linguistics by evaluating similarities in prosodic and semantic features of speech.
@@ -75,7 +67,7 @@ conda env create -f pipeline_environment.yml
 conda activate LLM_pipeline
 ```
 4. Add inputs for pipeline
-   - Refer to README in `/retellings` or [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/retellings) for information on subfolder formatting.
+   - Refer to README in `/retellings` or [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/retellings) for information on subfolder and participant metadata formatting.
 
 5. Run the application
 ```
