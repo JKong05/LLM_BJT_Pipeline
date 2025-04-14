@@ -6,11 +6,13 @@ as such: `particpant_id`, `story_id`, `sensory_modality`,`congruence`.wav. Depen
 number of audio files will vary. Ensure that these naming conventions are kept consistent throughout to ensure consistency of the
 pipeline.
 <br />
-participant_metadata.csv should be filled out with corresponding `participant_id` and `age` of the participant.
+<br />
+[participant_metadata.csv](https://github.com/JKong05/LLM_BJT_Pipeline/blob/main/retellings/participant_metadata.csv) should be filled out with corresponding `participant_id` and `age` of the participant.
 
+<br />
 
 > [!NOTE]
-> Order of modality for each story does not matter (i.e. story1 can be audio, visual, or audiovisual)
+> Order of modality for each story does not matter (i.e. story1-story6 can be audio, visual, or audiovisual)
 
 ```
 # example folder structure
