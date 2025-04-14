@@ -76,21 +76,3 @@ def semantic_seamless_search(text_input, batch_size=500, overlap=50, source_lang
 
     # average out the embeddings for the chunks for a long text input
     return torch.mean(torch.stack(embeddings), dim=0)
-
-
-# jinaAi model
-def semantic_search(text_input):
-    model = AutoModel.from_pretrained("jinaai/jina-embeddings-v3", trust_remote_code=True).to('cuda')
-
-    embeddings = model.encode(text_input, task="text-matching", truncate_dim=512)
-
-    return embeddings
-
-def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[0]
-    input_mask_expanded = (
-        attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-    )
-    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(
-        input_mask_expanded.sum(1), min=1e-9
-    )
