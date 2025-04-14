@@ -5,6 +5,9 @@ Within the subfolders should be the audio retellings (collected from the virtual
 as such: `particpant_id`, `story_id`, `sensory_modality`,`congruence`.wav. Depending on how many stories each participant is exposed to, the
 number of audio files will vary. Ensure that these naming conventions are kept consistent throughout to ensure consistency of the
 pipeline.
+<br />
+participant_metadata.csv should be filled out with corresponding `participant_id` and `age` of the participant.
+
 
 > [!NOTE]
 > Order of modality for each story does not matter (i.e. story1 can be audio, visual, or audiovisual)
