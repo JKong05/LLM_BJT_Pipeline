@@ -38,41 +38,41 @@ def get_semantic_embeddings(audio_path, story_id, participant_id, chunk_duration
 
     return semantic_seamless_search(full_text)
 
-# Seamless Sonar encoder
+# 
 def semantic_seamless_search(text_input, batch_size=500, overlap=50, source_lang="eng_Latn", max_tokens=512):
-    if torch.cuda.is_available():
-        device = torch.device("cuda:0")
-        dtype = torch.float16
+    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
     
+    # initialize encoders and decoders
     text_tokenization_model = TextToTextModelPipeline(
         encoder="text_sonar_basic_encoder",
         decoder="text_sonar_basic_decoder",
         tokenizer="text_sonar_basic_encoder",
         device=device
     )
-
     t2vec_model = TextToEmbeddingModelPipeline(
         encoder="text_sonar_basic_encoder",
         tokenizer="text_sonar_basic_encoder"
     )
-
     encoder = text_tokenization_model.tokenizer.create_encoder(lang=source_lang)
     decoder = text_tokenization_model.tokenizer.create_decoder()
+    tokenized = encoder(text_input)
+    token_ids = [t.item() if hasattr(t, "item") else t for t in tokenized]
 
-    tokenized_text = encoder(text_input)
-    token_ids = [token.item() if hasattr(token, "item") else token for token in tokenized_text]
-
-    chunks_text = []
-    for i in range(0, len(token_ids), max_tokens - overlap):
-        chunk_ids = token_ids[i: i + max_tokens]
-        chunk_text = decoder(torch.tensor(chunk_ids))
-        chunks_text.append(chunk_text)
-        print("Chunk: " + str(i))
+    stride = max_tokens - overlap
+    windows = []
+    for start in range(0, len(token_ids), stride):
+        end = min(start + max_tokens, len(token_ids))
+        window_ids = token_ids[start:end]
+        text_chunk = decoder(torch.tensor(window_ids, device=device))
+        windows.append(text_chunk)
 
     embeddings = []
-    for chunk in chunks_text:
+    for chunk in windows:
         emb = t2vec_model.predict([chunk], source_lang=source_lang)
-        embeddings.append(emb)
+        if emb.dim() == 2 and emb.shape[0] == 1:
+            emb = emb.squeeze(0)
+        embeddings.append(emb.to(device))
 
-    # average out the embeddings for the chunks for a long text input
-    return torch.mean(torch.stack(embeddings), dim=0)
+    total_vector = torch.cat(embeddings, dim=-1)  
+    return total_vector
+
