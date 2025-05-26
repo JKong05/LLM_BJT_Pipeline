@@ -4,6 +4,7 @@ from pydub import AudioSegment
 import torch
 import torch.nn.functional as F
 import sys
+import re
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from collections import defaultdict
@@ -26,12 +27,10 @@ def expressive_concat(stories_folder, retelling_folder, samples_folder, particip
             if f.endswith(".wav"):
                 retelling_files.append((root, f))
     
-    # Optionally, sort the retelling files – here, using the numeric part at the start of filename.
     retelling_files.sort(key=lambda x: int(''.join(filter(str.isdigit, x[1].split('_')[0]))))
     
     for root, retelling_filename in retelling_files:
         try:
-            # Parse the retelling filename
             participant_id, story_id, modality, correctness = parse_audio_filename(retelling_filename)
         except ValueError as e:
             print(e)
@@ -40,42 +39,40 @@ def expressive_concat(stories_folder, retelling_folder, samples_folder, particip
         if participant_filter and participant_id not in participant_filter:
             continue
 
-        # Use check_modality to get a final modality value if needed.
         modality = check_modality(retelling_filename)
         key = (participant_id, story_id)
         
-        # Get the full path to the retelling file.
         retelling_path = os.path.join(root, retelling_filename)
 
         sample_filename = f"source_{story_id}_sample.wav"  
         sample_path = os.path.join(samples_folder, sample_filename)
-        if not os.path.exists(sample_path):
-            story_filename = f"{story_id.capitalize()}.wav" 
-            story_source_path = os.path.join(audios_folder, story_filename)
-            if not os.path.exists(story_source_path):
-                print(f"Story file {story_filename} not found in {audios_folder}.")
-                continue
+        source_expressive_embedding = None  # default if source audio is missing
+        story_filename = f"{story_id.capitalize()}.wav"
+        story_source_path = os.path.join(audios_folder, story_filename)
+        
+        if os.path.exists(story_source_path):
             # Create sample audio from the source story.
             audio = AudioSegment.from_wav(story_source_path)
             sample = audio[:sample_duration_ms]
             sample.export(sample_path, format="wav")
-        
-        # Generate embeddings using the sample (as the story embedding)
-        # and the retelling file (as the retelling embedding).
-        source_expressive_embedding = get_prosodic_embeddings(sample_path)
+            source_expressive_embedding = get_prosodic_embeddings(sample_path)
+        else:
+            print(f"Story file {story_filename} not found in {audios_folder}.")
+            # The entry will still be preserved, but the source expressive embedding is None.
+
         retelling_expressive_embedding = get_prosodic_embeddings(retelling_path)
 
         expressive_embs[key] = {
             'participant_id': participant_id,
             'story_id': story_id,
             'retelling_expressive': retelling_expressive_embedding,
-            'modality': modality, 
+            'modality': modality,
             'congruence': correctness,
-            'story_expressive': source_expressive_embedding,
+            'story_expressive': source_expressive_embedding,  # may be None for visual-only stories
             'story_path': sample_path,
             'retelling_path': retelling_path
         }
-        print(f"Generating expressive embeddings for {participant_id} - story {story_id}: {modality}")
+        print(f"Generating expressive embeddings for {participant_id} - {story_id}: {modality}")
 
     return expressive_embs
 
@@ -112,7 +109,7 @@ def semantic_concat(stories_folder, retelling_folder, participant_filter=None):
                             continue
 
                         modality = check_modality(retelling_filename)
-                        key = (participant_id, story_id)
+                        key = (participant_id, story_id.lower())
                         
                         retelling_path = os.path.join(root, retelling_filename)
                         source_semantic_embedding = semantic_seamless_search(story_text)
@@ -126,7 +123,7 @@ def semantic_concat(stories_folder, retelling_folder, participant_filter=None):
                             'congruence': correctness,
                             'story_semantic': source_semantic_embedding,
                         }
-                        print(f"Generated semantic embeddings for {participant_id} - {story_id}: {modality}")
+                        print(f"Generating semantic embeddings for {participant_id} - {story_id}: {modality}")
 
     return semantic_embs
     
@@ -151,12 +148,16 @@ def pairwise_comparison_group(expressive_embeddings, semantic_embeddings, story_
     comparisons = []
     # Process each group separately.
     for group_name, group_stories in story_groups.items():
-        # First, determine participants who have entries for every story in this group, and check group-level congruence.
+        # If group_stories contains story7, remove it.
+        group_stories = [s for s in group_stories if s.lower() != "story7"]
+        
+        # Determine participants with entries for every story in this group.
         participants = set()
         for (participant, story) in expressive_embeddings.keys():
             if story in group_stories:
                 participants.add(participant)
-        # For each participant, check if they have a consistent congruence across the group (using expressive embeddings).
+                
+        # Check if participants have a consistent group-level congruence.
         valid_participants = []
         for participant in participants:
             group_cong = get_group_congruence(expressive_embeddings, group_stories, participant)
@@ -164,10 +165,12 @@ def pairwise_comparison_group(expressive_embeddings, semantic_embeddings, story_
                 valid_participants.append((participant, group_cong))
         valid_participants.sort()  # sort for deterministic order
 
-        # Now, for each individual story in the group, do pairwise comparisons among valid participants 
-        # only if their group-level congruence is the same.
+        # For each individual story in the group, do pairwise comparisons.
         for story in group_stories:
-            # Get entries for this story from both dictionaries.
+            # If story is story7, skip (this line can be omitted since we already filtered group_stories)
+            if story.lower() == "story7":
+                continue
+                
             story_entries = []
             for participant, group_cong in valid_participants:
                 key = (participant, story)
@@ -175,13 +178,11 @@ def pairwise_comparison_group(expressive_embeddings, semantic_embeddings, story_
                     story_entries.append((participant,
                                           expressive_embeddings[key],
                                           semantic_embeddings[key]))
-            # Now, compare all pairs for this story.
             n = len(story_entries)
             for i in range(n):
                 for j in range(i + 1, n):
                     p1, exp_data1, sem_data1 = story_entries[i]
                     p2, exp_data2, sem_data2 = story_entries[j]
-                    # Although valid_participants ensured group-level congruence, do a sanity check at the story level:
                     if exp_data1.get('congruence') != exp_data2.get('congruence'):
                         continue
                     # Compute expressive similarity.
@@ -191,7 +192,11 @@ def pairwise_comparison_group(expressive_embeddings, semantic_embeddings, story_
                         emb1_exp = torch.tensor(emb1_exp)
                     if not isinstance(emb2_exp, torch.Tensor):
                         emb2_exp = torch.tensor(emb2_exp)
-                    exp_sim = F.cosine_similarity(emb1_exp.unsqueeze(0), emb2_exp.unsqueeze(0)).item()
+
+                    # tensor dimensionality check
+                    emb1_exp, emb2_exp = zero_pad(emb1_exp, emb2_exp)
+                    exp_sim = F.cosine_similarity(emb1_exp, emb2_exp, dim=-1).item()
+                    
                     # Compute semantic similarity.
                     emb1_sem = sem_data1.get('retelling_semantic')
                     emb2_sem = sem_data2.get('retelling_semantic')
@@ -199,7 +204,10 @@ def pairwise_comparison_group(expressive_embeddings, semantic_embeddings, story_
                         emb1_sem = torch.tensor(emb1_sem)
                     if not isinstance(emb2_sem, torch.Tensor):
                         emb2_sem = torch.tensor(emb2_sem)
-                    sem_sim = F.cosine_similarity(emb1_sem.unsqueeze(0), emb2_sem.unsqueeze(0)).item()
+
+                    # tensor dimensionality check
+                    emb1_sem, emb2_sem = zero_pad(emb1_sem, emb2_sem)
+                    sem_sim = F.cosine_similarity(emb1_sem, emb2_sem, dim=0).item()
                     comparisons.append({
                         'group': group_name,
                         'story_id': story,
@@ -211,20 +219,21 @@ def pairwise_comparison_group(expressive_embeddings, semantic_embeddings, story_
                         'participant1_congruence': exp_data1.get('congruence'),
                         'participant2_congruence': exp_data2.get('congruence'),
                         'participant1_age': exp_data1.get('age'),
-                        'participant2_age': exp_data2.get('age'),
-                        'participant1_group_congruence': get_group_congruence(expressive_embeddings, group_stories, p1),
-                        'participant2_group_congruence': get_group_congruence(expressive_embeddings, group_stories, p2)
+                        'participant2_age': exp_data2.get('age')
                     })
     return comparisons
 
 def pairwise_comparison_all(expressive_embeddings, semantic_embeddings):
     story_entries = defaultdict(list)
     for key, exp_data in expressive_embeddings.items():
-        # Retrieve semantic data for the same key.
+        # Extract story id.
+        participant, story = key
+        # Skip if this story is "story7".
+        if story.lower() == "story7":
+            continue
         sem_data = semantic_embeddings.get(key)
         if sem_data is None:
             continue  # Skip if there is no matching semantic entry.
-        participant, story = key
         story_entries[story].append((participant, exp_data, sem_data))
     
     comparisons = []
@@ -234,15 +243,17 @@ def pairwise_comparison_all(expressive_embeddings, semantic_embeddings):
             for j in range(i+1, n):
                 participant1, exp_data1, sem_data1 = entries[i]
                 participant2, exp_data2, sem_data2 = entries[j]
-                
                 # Compute expressive similarity.
                 emb1_exp = exp_data1.get('retelling_expressive')
                 emb2_exp = exp_data2.get('retelling_expressive')
+
                 if not isinstance(emb1_exp, torch.Tensor):
                     emb1_exp = torch.tensor(emb1_exp)
                 if not isinstance(emb2_exp, torch.Tensor):
                     emb2_exp = torch.tensor(emb2_exp)
-                expressive_sim = F.cosine_similarity(emb1_exp.unsqueeze(0), emb2_exp.unsqueeze(0)).item()
+                
+                emb1_exp, emb2_exp = zero_pad(emb1_exp, emb2_exp)
+                exp_sim = F.cosine_similarity(emb1_exp, emb2_exp, dim=-1).item()
                 
                 # Compute semantic similarity.
                 emb1_sem = sem_data1.get('retelling_semantic')
@@ -251,13 +262,14 @@ def pairwise_comparison_all(expressive_embeddings, semantic_embeddings):
                     emb1_sem = torch.tensor(emb1_sem)
                 if not isinstance(emb2_sem, torch.Tensor):
                     emb2_sem = torch.tensor(emb2_sem)
-                semantic_sim = F.cosine_similarity(emb1_sem.unsqueeze(0), emb2_sem.unsqueeze(0)).item()
                 
+                emb1_sem, emb2_sem = zero_pad(emb1_sem, emb2_sem)
+                sem_sim = F.cosine_similarity(emb1_sem, emb2_sem, dim=0).item()
                 comparisons.append({
                     'story_id': story,
                     'participant_pair': f"{participant1}-{participant2}",
-                    'expressive_similarity': expressive_sim,
-                    'semantic_similarity': semantic_sim,
+                    'expressive_similarity': exp_sim,
+                    'semantic_similarity': sem_sim,
                     'participant1_modality': exp_data1.get('modality'),
                     'participant2_modality': exp_data2.get('modality'),
                     'participant1_congruence': exp_data1.get('congruence'),
@@ -271,30 +283,35 @@ def source_comparison(expressive_embeddings, semantic_embeddings):
     comparisons = []
     for key, exp_data in expressive_embeddings.items():
         participant, story = key
-        
-        # Retrieve corresponding semantic data; skip if missing.
+        # Skip story7
+        if story.lower() == "story7":
+            continue
+            
         sem_data = semantic_embeddings.get(key)
         if sem_data is None:
             continue
         
-        # Expressive embeddings from source and retelling.
         source_exp = exp_data.get('story_expressive')
         retelling_exp = exp_data.get('retelling_expressive')
-        # Ensure they're torch tensors.
-        if not isinstance(source_exp, torch.Tensor):
-            source_exp = torch.tensor(source_exp)
-        if not isinstance(retelling_exp, torch.Tensor):
-            retelling_exp = torch.tensor(retelling_exp)
-        exp_sim = F.cosine_similarity(source_exp.unsqueeze(0), retelling_exp.unsqueeze(0)).item()
-        
-        # Semantic embeddings from source and retelling.
+        if source_exp is not None:
+            if not isinstance(source_exp, torch.Tensor):
+                source_exp = torch.tensor(source_exp)
+            if not isinstance(retelling_exp, torch.Tensor):
+                retelling_exp = torch.tensor(retelling_exp)
+            source_exp, retelling_exp = zero_pad(source_exp, retelling_exp)
+            exp_sim = F.cosine_similarity(source_exp, retelling_exp, dim=-1).item()
+        else:
+            exp_sim = None
+
         source_sem = sem_data.get('story_semantic')
         retelling_sem = sem_data.get('retelling_semantic')
         if not isinstance(source_sem, torch.Tensor):
             source_sem = torch.tensor(source_sem)
         if not isinstance(retelling_sem, torch.Tensor):
             retelling_sem = torch.tensor(retelling_sem)
-        sem_sim = F.cosine_similarity(source_sem.unsqueeze(0), retelling_sem.unsqueeze(0)).item()
+        
+        source_sem, retelling_sem = zero_pad(source_sem, retelling_sem)
+        sem_sim = F.cosine_similarity(source_sem, retelling_sem, dim=0).item()
         
         comparisons.append({
             'participant_id': participant,
@@ -307,11 +324,13 @@ def source_comparison(expressive_embeddings, semantic_embeddings):
         })
     return comparisons
 
+
+
 '''
 comparison functions with MEG story
 
 '''
-def MEG_baseline_comparison(expressive_embeddings, semantic_embeddings, baseline_stories, story7_id="story7"):
+def meg_baseline_comparison(expressive_embeddings, semantic_embeddings, baseline_stories, story7_id="story7"):
     comparisons = []
 
     baseline_data = defaultdict(dict)
@@ -372,8 +391,11 @@ def MEG_baseline_comparison(expressive_embeddings, semantic_embeddings, baseline
                 if not isinstance(meg_sem, torch.Tensor):
                     meg_sem = torch.tensor(meg_sem)
                 
-                exp_sim = F.cosine_similarity(meg_exp.unsqueeze(0), base_exp.unsqueeze(0)).item()
-                sem_sim = F.cosine_similarity(meg_sem.unsqueeze(0), base_sem.unsqueeze(0)).item()
+                meg_exp, base_exp = zero_pad(meg_exp, base_exp)
+                meg_sem, base_sem = zero_pad(meg_sem, base_sem)
+
+                exp_sim = F.cosine_similarity(meg_exp, base_exp, dim=-1).item()
+                sem_sim = F.cosine_similarity(meg_sem, base_sem, dim=0).item()
                 
                 comparisons.append({
                     'participant_id': participant,
@@ -410,13 +432,28 @@ def parse_audio_filename(filename):
         raise ValueError(f"Filename {filename} does not match expected pattern.")
 
 def check_modality(filename):
-    filename_parts = filename.lower().split('_')
-    modality = 'audio'  # default
-    if len(filename_parts) > 2:
-        if 'audiovisual' in filename_parts[-1]:
-            modality = 'audiovisual'
-        elif 'visual' in filename_parts[-1]:
-            modality = 'visual'
-        elif 'audio' in filename_parts[-1]:
-            modality = 'audio'
-    return modality
+    base, _ = os.path.splitext(filename.lower())
+    parts = base.split('_')
+    # modality should be the third chunk:
+    if len(parts) >= 3 and parts[2] in ("audio", "visual", "audiovisual"):
+        return parts[2]
+    # fallback: scan all parts for one of the keywords
+    for m in ("audiovisual", "visual", "audio"):
+        if m in parts:
+            return m
+    # default if we really can't parse it
+    return "audio"
+
+def zero_pad(t1: torch.Tensor, t2: torch.Tensor) -> (torch.Tensor, torch.Tensor):
+    d1, d2 = t1.size(-1), t2.size(-1)
+    print(f"zero_pad called with sizes -> t1: {d1}, t2: {d2}")
+    if d1 == d2:
+        return t1, t2
+    max_d = max(d1, d2)
+    if d1 < max_d:
+        pad = (0, max_d - d1)
+        t1 = F.pad(t1, pad, "constant", 0)
+    else:
+        pad = (0, max_d - d2)
+        t2 = F.pad(t2, pad, "constant", 0)
+    return t1, t2
