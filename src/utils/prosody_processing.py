@@ -16,6 +16,15 @@ from seamless_communication.models.unity import (
     load_unity_unit_tokenizer,
 )
 
+# Set up device objects:
+cpu_device = torch.device("cpu")
+if torch.cuda.is_available():
+    gpu_device = torch.device("cuda:0")
+    dtype = torch.float32
+else:
+    gpu_device = torch.device("cpu")
+    dtype = torch.float32
+
 CHECKPOINTS_PATH = pathlib.Path("/home/wallacelab/teba/multimodal_brain_inspired/LLM_BJT/pipeline/content/SeamlessExpressive")
 if not CHECKPOINTS_PATH.exists():
     from huggingface_hub import snapshot_download
@@ -37,27 +46,26 @@ demo_metadata = [
 
 asset_store.metadata_providers.append(InProcAssetMetadataProvider(demo_metadata))
 
-if torch.cuda.is_available():
-    device = torch.cuda.set_device(0)
-    dtype = torch.float32
-
+# The Translator (and therefore the model) is loaded on GPU:
 translator = Translator(
     model_name_or_card="seamless_expressivity",
     vocoder_name_or_card=None,
-    device=device,
+    device=gpu_device,  # inference runs here
     dtype=dtype,
 )
 
+# Load GCMVN stats on CPU
 _gcmvn_mean, _gcmvn_std = load_gcmvn_stats("vocoder_pretssel")
-gcmvn_mean = torch.tensor(_gcmvn_mean, device=device, dtype=dtype)  
-gcmvn_std = torch.tensor(_gcmvn_std, device=device, dtype=dtype)
+gcmvn_mean_cpu = torch.tensor(_gcmvn_mean, device=cpu_device, dtype=dtype)  
+gcmvn_std_cpu = torch.tensor(_gcmvn_std, device=cpu_device, dtype=dtype)
 
-convert_to_fbank = WaveformToFbankConverter(
+# Create fbank converter on CPU:
+convert_to_fbank_cpu = WaveformToFbankConverter(
     num_mel_bins=80,
     waveform_scale=2**15,
     channel_last=True,
     standardize=False,
-    device=device,
+    device=cpu_device,
     dtype=dtype,
 )
 
@@ -65,56 +73,74 @@ def load_audio(filepath, target_sample_rate=16000):
     waveform, sample_rate = torchaudio.load(filepath)
     if sample_rate != target_sample_rate:
         waveform = torchaudio.transforms.Resample(sample_rate, target_sample_rate)(waveform)
+    # Waveform is on CPU by default; convert to mono and add channel dimension
     waveform = waveform.mean(dim=0).unsqueeze(-1)  # Ensuring [time, channels] format
     return waveform, target_sample_rate
-
 
 def normalize_fbank(data):
     fbank = data["fbank"]
     std, mean = torch.std_mean(fbank, dim=0)
-    data["fbank"] = fbank.subtract(mean).divide(std)
-    data["gcmvn_fbank"] = fbank.subtract(gcmvn_mean).divide(gcmvn_std)
+    normalized_fbank = (fbank - mean) / std
+    data["fbank"] = normalized_fbank
+    data["gcmvn_fbank"] = (fbank - gcmvn_mean_cpu) / gcmvn_std_cpu
     return data
 
 def get_prosodic_embeddings(filepath, chunk_duration=10):
+    """
+    Performs fbank conversion and normalization on CPU.
+    Moves only the minimal tensor to GPU for inference.
+    Each chunk's result is moved back to CPU immediately to avoid accumulating GPU memory.
+    """
     waveform, sample_rate = load_audio(filepath)
-    duration = waveform.shape[0] / sample_rate
-    
+    num_samples = waveform.shape[0]
+    duration    = num_samples / sample_rate
+
+    # If longer than chunk_duration, we'll chunk; else do the original single‐pass
     if duration > chunk_duration:
         samples_per_chunk = int(chunk_duration * sample_rate)
-        num_chunks = int(torch.ceil(torch.tensor(waveform.shape[0] / samples_per_chunk)))
+        num_chunks = int(torch.ceil(torch.tensor(num_samples / samples_per_chunk)))
         chunk_embeddings = []
-        
+
         for i in range(num_chunks):
-            start_idx = i * samples_per_chunk
-            end_idx = min((i + 1) * samples_per_chunk, waveform.shape[0])
-            
-            chunk = waveform[start_idx:end_idx]
-            chunk = chunk.to(device=device, dtype=dtype)
+            start = i * samples_per_chunk
+            end   = min(start + samples_per_chunk, num_samples)
+            chunk = waveform[start:end]
+            if chunk.shape[0] < samples_per_chunk:
+                pad_amt = samples_per_chunk - chunk.shape[0]
+                chunk = F.pad(chunk, (0, 0, 0, pad_amt))
 
-            example = convert_to_fbank({"waveform": chunk, "sample_rate": sample_rate})
-            example = normalize_fbank(example)
+            # CPU fbank + norm
+            ex = convert_to_fbank_cpu({"waveform": chunk, "sample_rate": sample_rate})
+            ex = normalize_fbank(ex)
+            inp = ex["gcmvn_fbank"]
+            if inp.ndim == 2:
+                inp = inp.unsqueeze(0)  # → [1, T, F]
 
-            prosody_encoder_input = example["gcmvn_fbank"]
-            if len(prosody_encoder_input.shape) == 2:
-                prosody_encoder_input = prosody_encoder_input.unsqueeze(0)
+            inp = inp.to(gpu_device, dtype=dtype)
+            with torch.no_grad(), autocast():
+                emb = translator.model.prosody_encoder_model(inp)  # [1, E]
+            emb = emb.cpu()  # keep the batch dim
+            chunk_embeddings.append(emb)
 
-            with autocast():
-                chunk_embedding = translator.model.prosody_encoder_model(prosody_encoder_input)
-                chunk_embeddings.append(chunk_embedding)
-        
-        embeddings = torch.mean(torch.stack(chunk_embeddings), dim=0)
-        
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        # [num_chunks, E]
+        seq = torch.cat(chunk_embeddings, dim=0)
+
     else:
-        waveform = waveform.to(device=device, dtype=dtype)
-        example = convert_to_fbank({"waveform": waveform, "sample_rate": sample_rate})
-        example = normalize_fbank(example)
+        # Original single‐pass branch
+        ex = convert_to_fbank_cpu({"waveform": waveform, "sample_rate": sample_rate})
+        ex = normalize_fbank(ex)
+        inp = ex["gcmvn_fbank"]
+        if inp.ndim == 2:
+            inp = inp.unsqueeze(0)  # → [1, T, F]
 
-        prosody_encoder_input = example["gcmvn_fbank"]
-        if len(prosody_encoder_input.shape) == 2:
-            prosody_encoder_input = prosody_encoder_input.unsqueeze(0)
+        inp = inp.to(gpu_device, dtype=dtype)
+        with torch.no_grad(), autocast():
+            seq = translator.model.prosody_encoder_model(inp)  # [1, E]
+        seq = seq.cpu()
 
-        with autocast():
-            embeddings = translator.model.prosody_encoder_model(prosody_encoder_input)
-
-    return embeddings
+    # Flatten [N, E] into [N * E]
+    expressivity_vector = seq.flatten()
+    return expressivity_vector
