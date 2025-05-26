@@ -2,15 +2,21 @@
 Code for LLM_BJT analytical pipeline (Fall24 ~ Spr24)
 
 ### Overview
-The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of prosodic and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings.
+The process of developing an analytical pipeline to compare participant retellings of stories involved a two-pronged approach: extraction of expressive and semantic features and the creation of representational embeddings. Prosodic features are elements of speech that contribute to the accent, rhythm, stress, intonation, tone, and pitch of the spoken language. Semantic features refer to specific characteristics of linguistics that constitute the meaning of the words that are being used. The combination of these two concepts help explain both the way in which an individual speaks and what their words mean. Therefore, a combination of multi-modal models were used to create embeddings.
 
 ### Purpose
-The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive expressivity model and Meta's SONAR semantic model**. A typical use case is as follows:
-
+The purpose of this pipeline is to extract and create representational vectors of a participant's retelling to a narrative story using **Meta's SeamlessExpressive model and Meta's SONAR semantic model**. A typical use case is as follows:
+  1. Gather audio retellings of stories in .wav format
+  2. Input raw audio into SeamlessExpressive model and generate expressive audio embeddings
+  3. Take raw audio and translate to text using ChatGPT Whisper model
+     - Input text translations into SONAR semantic encoder and generate semantic text embeddings 
+  4. Concatenate embeddings from longer recordings into representational vectors.
+  5. Perform cosine similarity between participant vectors and create representational dissimilarity matrix
 
 ### Goals
 1. Determine trends and commonalities in and between age group linguistics by evaluating similarities in prosodic and semantic features of speech.
-2. Develop foundational code infrastructure for refinement and expansion.
+2. Evaluate and establish potential associations and relationships between age and retelling fidelity.
+3. Develop foundational code infrastructure for refinement and expansion.
 
 # Folder Structure
 ```
@@ -24,7 +30,6 @@ The purpose of this pipeline is to extract and create representational vectors o
 ├── src
 │   ├── utils                           # Tools and utilities for inputing_processing and entrypoint run file
 │   ├── input_processing.py             # Parent function handling audio and semantic embedding processing
-│   ├── model.py                        # Handles LLM model integration
 │   └── run.py                          # Entrypoint for application
 ├── stories
 │   ├── audios                          # Raw audio files for the narrative stories
@@ -37,8 +42,9 @@ The purpose of this pipeline is to extract and create representational vectors o
 └── visualize.ipynb
 ```
 
-# Abstract (placeholder)
-Cool abstract bro
+# Abstract
+The ability for humans to perceive and comprehend stimuli of varying sensory modalities and levels of complexities has long been a central question in both neuroscience and developmental linguistics. Traditionally, research in these fields have focused primarily on how individuals of varying ages acquire and integrate information to support language and cognitive development. Recent advances in computational modeling—in particular, neural alignment models—have opened new avenues for probing the mechanisms underlying multisensory integration, attention, and narrative comprehension. However, the stimuli used to evaluate such models are often constrained by unnatural, two-dimensional designs, limiting their ecological validity. We present a novel paradigm in which participants experience narrative stories in auditory, visual, or audiovisual modalities within a three-dimensional virtual reality (VR) environment. Immersion is manipulated by varying the congruence between the narrative and its surrounding virtual context, allowing us to examine the effects of environmental mismatch on multisensory encoding. By analyzing participant language output using the Seamless Communication model infrastructure from Meta, we can extract semantic and expressive features of speech to assess patterns in linguistic behavior. Our work offers new insights into the dynamic intersection of sensory context and language processing, highlighting the critical role of immersive congruency in shaping language and informing future models of language development in immersive settings.
+
 
 # Quick Start
 > [!NOTE]
@@ -67,7 +73,7 @@ conda env create -f pipeline_environment.yml
 conda activate LLM_pipeline
 ```
 4. Add inputs for pipeline
-   - Refer to README in `/retellings` or [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/retellings) for information on subfolder and participant metadata formatting.
+   - Refer to README in `/retellings` or [here](https://github.com/JKong05/LLM_BJT_Pipeline/tree/main/retellings) for information on subfolder formatting.
 
 5. Run the application
 ```
